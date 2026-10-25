@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eagle World Texture &amp; Landmark Studio — Wibu World Builder</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/node_modules/three/build/three.module.js",
+        "three/addons/": "/node_modules/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">⛩️</div>
+      <div>
+        <h1>Eagle World Texture &amp; Landmark Studio</h1>
+        <p class="subtitle">Công cụ Wibu hóa Billboard, Mural, Màn LED, Poster &amp; Tượng Đài 3D (`gta sa gameplay-lab`)</p>
+      </div>
+    </div>
+
+    <nav class="main-tabs">
+      <button class="main-tab active" data-tab="tab-surfaces">
+        🖼️ 1. Mod Texture Bề Mặt 2D <span class="tab-badge" id="nav-txd-count">1,635 TXD</span>
+      </button>
+      <button class="main-tab" data-tab="tab-monuments">
+        🗽 2. Thay Tượng Đài 3D (.DFF+.TXD) <span class="tab-badge" id="nav-mon-count">93 Tượng</span>
+      </button>
+      <button class="main-tab" data-tab="tab-deploy">
+        📦 3. Staged Pack &amp; Deploy / Rollback <span class="tab-badge accent" id="nav-staged-count">0 Staged</span>
+      </button>
+    </nav>
+
+    <div class="topbar-actions">
+      <div class="budget-pill" id="global-budget-pill" title="Chênh lệch dung lượng gói Staged so với bản hiện tại">
+        Tiết kiệm: <strong id="global-saved-kb">0 KB</strong>
+      </div>
+      <button class="btn btn-primary" id="btn-quick-deploy">
+        🚀 Deploy Vào Game
+      </button>
+    </div>
+  </header>
+
+  <!-- TAB 1: 2D SURFACE TEXTURE STUDIO -->
+  <main class="workspace active" id="tab-surfaces">
+    <!-- Left Sidebar: Catalog Filter & TXD List -->
+    <aside class="panel sidebar-panel">
+      <div class="panel-header">
+        <h2>🗂️ Kho Bề Mặt Công Trình</h2>
+        <span class="count-tag" id="catalog-result-count">0 mục</span>
+      </div>
+
+      <div class="filter-section">
+        <label class="filter-label">Phân loại Hạng mục Bề mặt (Chọn để đổi Converter):</label>
+        <div class="cat-pills" id="category-pills">
+          <button class="cat-pill active" data-cat="ALL">Tất cả</button>
+          <button class="cat-pill" data-cat="CAT1_BILLBOARDS">🪧 CAT1: Billboard</button>
+          <button class="cat-pill" data-cat="CAT2_MURALS_BANNERS_GRAFFITI">🎨 CAT2: Mural / Tag / Banner</button>
+          <button class="cat-pill" data-cat="CAT3_NEON_LED_SCREENS_CASINOS">✨ CAT3: Neon / LED / Casino</button>
+          <button class="cat-pill" data-cat="CAT4_POSTERS_SHOPS_TRANSIT_VENDING">🏪 CAT4: Poster / Bus / Vending</button>
+          <button class="cat-pill" data-cat="CAT5_MONUMENTS_STATUES_LANDMARKS">🗽 CAT5: Tượng (TXD)</button>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-col">
+            <label>Khu vực / Bang:</label>
+            <select id="filter-region">
+              <option value="ALL">Tất cả Khu vực (14 Bang)</option>
+            </select>
+          </div>
+          <div class="filter-col">
+            <label>Tầng Archive / Trạng thái:</label>
+            <select id="filter-tier">
+              <option value="ALL">Mọi Archive</option>
+              <option value="INFLATED">🔥 Đang phình dung lượng (&gt;1.2×)</option>
+              <option value="STAGED">✅ Đã sửa trong Staging</option>
+              <option value="GROUP_B1">GROUP_B1_TEXTURES (Ads)</option>
+              <option value="GROUP_A">GROUP_A_MODS (Shops/EHI)</option>
+              <option value="WIBU01">Wibu01 Japan Island</option>
+              <option value="BASE_NEAR">Base S&amp;S / GTA SA</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-col">
+            <label>Sắp xếp theo:</label>
+            <select id="filter-sort">
+              <option value="recommended">⭐ Đề xuất ưu tiên</option>
+              <option value="inflation">📈 Độ phình dung lượng (GROUP_B1)</option>
+              <option value="placements">📍 Mật độ xuất hiện trên Map</option>
+              <option value="size_desc">💾 Dung lượng file .TXD giảm dần</option>
+              <option value="name">🔤 Tên A → Z</option>
+            </select>
+          </div>
+          <div class="filter-col checkbox-col">
+            <label class="checkbox-label">
+              <input type="checkbox" id="filter-include-lod" />
+              Hiện cả file `*_lod.txd`
+            </label>
+          </div>
+        </div>
+
+        <div class="search-box">
+          <input type="text" id="filter-search" placeholder="Tìm tên .TXD, model .DFF hoặc tên ảnh (vd: billbrd, bustopm, tags_la, postersub)..." />
+        </div>
+      </div>
+
+      <div class="txd-list" id="txd-list"></div>
+    </aside>
+
+    <!-- Center Panel: 2D Raster Grid + 3D DFF WebGL Viewer -->
+    <section class="panel center-panel">
+      <div class="panel-header center-header">
+        <div class="txd-title-block">
+          <h2 id="active-txd-title">Chọn một file .TXD ở danh sách bên trái</h2>
+          <div class="txd-meta-badges" id="active-txd-badges"></div>
+        </div>
+
+        <div class="view-mode-switch">
+          <button class="view-btn active" data-view="2d" id="btn-view-2d">🖼️ Lưới Ảnh 2D &amp; So Sánh</button>
+          <button class="view-btn" data-view="3d" id="btn-view-3d">🧊 Xem Trên Khung 3D (.DFF)</button>
+        </div>
+      </div>
+
+      <!-- 2D View Container -->
+      <div class="center-content active" id="view-2d-container">
+        <!-- Before / After Comparison Banner (shown when a raster is selected/converted) -->
+        <div class="comparison-deck hidden" id="comparison-deck">
+          <div class="comp-card">
+            <div class="comp-card-header">
+              <span>ẢNH GỐC TRONG GAME (BEFORE)</span>
+              <span class="comp-dim" id="comp-before-meta">-</span>
+            </div>
+            <div class="comp-img-wrap checkerboard">
+              <img id="comp-before-img" alt="Before" />
+              <div class="uv-overlay-box hidden" id="uv-overlay-box" title="Vùng UV được model .DFF cắt sử dụng"></div>
+            </div>
+          </div>
+
+          <div class="comp-arrow">➜</div>
+
+          <div class="comp-card highlight">
+            <div class="comp-card-header">
+              <span>ẢNH SAU KHI CONVERT WIBU (AFTER)</span>
+              <span class="comp-dim" id="comp-after-meta">Chưa chạy Preview</span>
+            </div>
+            <div class="comp-img-wrap checkerboard">
+              <img id="comp-after-img" alt="After Preview" />
+            </div>
+          </div>
+
+          <div class="comp-card lod-card hidden" id="comp-lod-card">
+            <div class="comp-card-header">
+              <span>🔗 ẢNH LOD TỰ ĐỘNG ĐỒNG BỘ</span>
+              <span class="comp-dim" id="comp-lod-meta">-</span>
+            </div>
+            <div class="comp-img-wrap checkerboard">
+              <img id="comp-lod-img" alt="LOD Sync Preview" />
+            </div>
+          </div>
+        </div>
+
+        <div class="raster-grid-toolbar">
+          <span id="raster-grid-status">Danh sách RwRaster bên trong file .TXD:</span>
+          <input type="text" id="raster-filter-input" placeholder="Lọc nhanh tên raster trong TXD này..." />
+        </div>
+
+        <div class="raster-grid" id="raster-grid"></div>
+      </div>
+
+      <!-- 3D WebGL View Container -->
+      <div class="center-content" id="view-3d-container">
+        <div class="viewer3d-toolbar">
+          <div class="viewer3d-left">
+            <label>Model 3D (.DFF) dùng chung TXD này:</label>
+            <select id="select-preview-dff"></select>
+          </div>
+          <div class="viewer3d-controls">
+            <button class="btn btn-sm" id="btn-3d-toggle-staged" title="Chuyển đổi giữa TXD đã Stage và TXD gốc">🔄 Đang xem: Bản Mới (Staged)</button>
+            <button class="btn btn-sm" id="btn-3d-wireframe">🕸️ Khung dây (Wireframe)</button>
+            <button class="btn btn-sm" id="btn-3d-autorotate">💫 Tự xoay</button>
+            <button class="btn btn-sm" id="btn-3d-resetcam">🎯 Reset Camera</button>
+          </div>
+        </div>
+        <div class="webgl-stage" id="surface-webgl-stage">
+          <div class="webgl-overlay-info" id="surface-3d-stats">Chọn chế độ 3D để tải mô hình .DFF + .TXD...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Specialized Surface Converter -->
+    <aside class="panel converter-panel">
+      <div class="panel-header">
+        <h2>⚙️ Bộ Chuyển Đổi Chuyên Biệt</h2>
+      </div>
+
+      <div class="converter-body" id="converter-body">
+        <!-- Converter Mode Selector -->
+        <div class="conv-section">
+          <label class="conv-label">Chế độ Converter theo Hạng mục bề mặt:</label>
+          <select id="conv-category-select" class="conv-select-highlight">
+            <option value="CAT1_BILLBOARDS">🪧 Converter A — Biển Quảng Cáo Lớn (Dual-Sync Near + LOD)</option>
+            <option value="CAT2_MURALS_BANNERS_GRAFFITI">🎨 Converter B — Tranh Tường, Graffiti &amp; Banner Dọc</option>
+            <option value="CAT3_NEON_LED_SCREENS_CASINOS">✨ Converter C — Màn Hình LED, Neon &amp; Atlas Vùng Con</option>
+            <option value="CAT4_POSTERS_SHOPS_TRANSIT_VENDING">🏪 Converter D — Poster, Nhà Chờ Bus &amp; Máy Bán Nước</option>
+          </select>
+          <p class="conv-desc" id="conv-schema-desc"></p>
+        </div>
+
+        <!-- Selected Raster & 3D UV Diagnostic Card -->
+        <div class="conv-diagnostic-card" id="conv-diagnostic-card">
+          <div class="diag-title">📐 Thông số Raster &amp; Khung 3D (.DFF UV)</div>
+          <div class="diag-grid">
+            <div><span>Tên Raster:</span> <strong id="diag-raster-name">-</strong></div>
+            <div><span>Cỡ lưu trong TXD:</span> <strong id="diag-stored-dim">-</strong></div>
+            <div><span>Định dạng gốc:</span> <strong id="diag-orig-fmt">-</strong></div>
+            <div><span>Khung 3D ngoài đời:</span> <strong id="diag-3d-aspect" class="accent-text">-</strong></div>
+          </div>
+          <div class="diag-lod-row" id="diag-lod-row">
+            🔗 Cặp LOD: <span id="diag-lod-info">Không có</span>
+          </div>
+        </div>
+
+        <!-- Source Image Picker / Sample Wibu Generator -->
+        <div class="conv-section">
+          <label class="conv-label">1. Chọn Ảnh Wibu Nguồn (.PNG / .JPG / .WEBP):</label>
+          <input type="file" id="conv-file-input" accept="image/png,image/jpeg,image/webp" class="file-input" />
+          <div class="sample-generator-box">
+            <div class="sample-header">Hoặc tạo nhanh Ảnh Mẫu Wibu để test thử ngay:</div>
+            <div class="sample-row">
+              <select id="conv-sample-theme">
+                <option value="cyber_anime">🌆 Cyber Anime Neon</option>
+                <option value="genshin_gold">✨ Genshin Impact Gold</option>
+                <option value="akihabara_neon">🏮 Akihabara Festival</option>
+                <option value="graffiti_tag">🎨 Street Graffiti Alpha Tag</option>
+              </select>
+              <input type="text" id="conv-sample-title" value="PROJECT EAGLE" placeholder="Tiêu đề trên biển..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- Universal Resolution & UV Aspect Controls -->
+        <div class="conv-section">
+          <label class="conv-label">2. Khung Ngân Sách Kích Thước &amp; Bù Tỷ Lệ UV:</label>
+          <div class="filter-row">
+            <div class="filter-col">
+              <label>Cấp độ phân giải (POT):</label>
+              <select id="conv-res-tier">
+                <option value="recommended">⭐ Chuẩn Khuyến Nghị (Max 512px)</option>
+                <option value="hd_hero">🔥 HD Hero Landmark (Max 1024px)</option>
+                <option value="original">📌 Giữ đúng cỡ W×H đang có</option>
+                <option value="compact">🪶 Siêu nhẹ (Max 256px)</option>
+              </select>
+            </div>
+            <div class="filter-col">
+              <label>Cách khớp khung:</label>
+              <select id="conv-fit-mode">
+                <option value="cover">Cắt vừa khít khung (Cover)</option>
+                <option value="contain">Giữ toàn bộ ảnh + Viền (Contain)</option>
+                <option value="stretch">Kéo giãn đầy khung (Stretch)</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="checkbox-label highlight-check">
+            <input type="checkbox" id="conv-uv-comp" checked />
+            <span><strong>Tự động bù tỷ lệ kéo giãn UV của khung 3D (.DFF)</strong> (Chống méo mặt nhân vật khi ảnh trong TXD là vuông 1:1 nhưng biển 3D là 2:1 hoặc đứng 5:8)</span>
+          </label>
+        </div>
+
+        <!-- Category-Specific Controls -->
+        <!-- CAT 1: Billboards -->
+        <div class="conv-section cat-specific-group" id="opts-CAT1_BILLBOARDS">
+          <label class="conv-label">3. Tùy chỉnh chuyên biệt: Biển Quảng Cáo (CAT1)</label>
+          <label class="checkbox-label highlight-check">
+            <input type="checkbox" id="opt-cat1-sync-lod" checked />
+            <span><strong>Đồng bộ Kép Near + LOD (`*_lod.txd`)</strong>: Tự thu nhỏ ảnh xuống 64×32 DXT1 và bơm vào file LOD đi kèm</span>
+          </label>
+          <div class="slider-row">
+            <label>Độ hòa trộn chất liệu bạt ngoài trời (Weathering): <span id="val-cat1-weather">8%</span></label>
+            <input type="range" id="opt-cat1-weather" min="0" max="0.35" step="0.01" value="0.08" />
+          </div>
+          <div class="slider-row">
+            <label>Độ dày khung viền sắt đen (px): <span id="val-cat1-border">0px</span></label>
+            <input type="range" id="opt-cat1-border" min="0" max="12" step="1" value="0" />
+          </div>
+        </div>
+
+        <!-- CAT 2: Murals, Graffiti, Tall Banners -->
+        <div class="conv-section cat-specific-group hidden" id="opts-CAT2_MURALS_BANNERS_GRAFFITI">
+          <label class="conv-label">3. Tùy chỉnh chuyên biệt: Mural / Graffiti / Banner (CAT2)</label>
+          <label>Kiểu xử lý bề mặt:</label>
+          <select id="opt-cat2-submode">
+            <option value="auto">🤖 Tự động nhận diện (Mural / Graffiti Alpha / Banner dọc)</option>
+            <option value="mural_wall_blend">🧱 Tranh tường: Hòa trộn vân gạch/bê tông gốc (DXT1)</option>
+            <option value="graffiti_alpha">💨 Graffiti / Decal: Giữ nền trong suốt Alpha (DXT5)</option>
+            <option value="tall_banner">🎏 Banner treo dọc: Hiệu ứng nếp vải lượn sóng</option>
+          </select>
+          <div class="slider-row">
+            <label>Độ nổi vân gạch/tường gốc lên tranh (Wall Blend): <span id="val-cat2-wall">18%</span></label>
+            <input type="range" id="opt-cat2-wall" min="0" max="0.45" step="0.01" value="0.18" />
+          </div>
+          <div class="slider-row">
+            <label>Độ bóng nếp gấp vải (cho Banner dọc): <span id="val-cat2-fabric">12%</span></label>
+            <input type="range" id="opt-cat2-fabric" min="0" max="0.35" step="0.01" value="0.12" />
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="opt-cat2-autokey" />
+            <span>Tự tách nền màu đơn sắc ở góc ảnh thành trong suốt (cho Graffiti)</span>
+          </label>
+        </div>
+
+        <!-- CAT 3: Neon, LED, Casino Sub-Region Atlas -->
+        <div class="conv-section cat-specific-group hidden" id="opts-CAT3_NEON_LED_SCREENS_CASINOS">
+          <label class="conv-label">3. Tùy chỉnh chuyên biệt: Màn Hình LED &amp; Bảng Neon (CAT3)</label>
+          <div class="slider-row">
+            <label>Hiệu ứng lưới bóng đèn LED (Scanline Grid): <span id="val-cat3-scanline">14%</span></label>
+            <input type="range" id="opt-cat3-scanline" min="0" max="0.40" step="0.01" value="0.14" />
+          </div>
+          <div class="slider-row">
+            <label>Tăng độ rực màu phát sáng đêm (Vibrance): <span id="val-cat3-vibrance">115%</span></label>
+            <input type="range" id="opt-cat3-vibrance" min="0.9" max="1.6" step="0.05" value="1.15" />
+          </div>
+          <label class="checkbox-label highlight-check">
+            <input type="checkbox" id="opt-cat3-usesub" />
+            <span><strong>Chỉ thay 1 ô vùng con trên tấm Atlas (Sub-Region Patch)</strong> — Giữ nguyên các chữ đèn Neon khác chung bức ảnh</span>
+          </label>
+          <div class="subregion-controls hidden" id="cat3-subregion-box">
+            <div class="uv-island-pills" id="cat3-uv-island-pills"></div>
+            <div class="filter-row">
+              <div class="filter-col"><label>U0 (Trái):</label><input type="number" id="opt-cat3-u0" min="0" max="0.95" step="0.05" value="0.0" /></div>
+              <div class="filter-col"><label>V0 (Trên):</label><input type="number" id="opt-cat3-v0" min="0" max="0.95" step="0.05" value="0.0" /></div>
+              <div class="filter-col"><label>U1 (Phải):</label><input type="number" id="opt-cat3-u1" min="0.05" max="1.0" step="0.05" value="0.5" /></div>
+              <div class="filter-col"><label>V1 (Dưới):</label><input type="number" id="opt-cat3-v1" min="0.05" max="1.0" step="0.05" value="0.5" /></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CAT 4: Posters, Bus Stops, Vending Machines -->
+        <div class="conv-section cat-specific-group hidden" id="opts-CAT4_POSTERS_SHOPS_TRANSIT_VENDING">
+          <label class="conv-label">3. Tùy chỉnh chuyên biệt: Poster, Nhà Chờ Bus &amp; Máy Bán Nước (CAT4)</label>
+          <div class="slider-row">
+            <label>Giữ lại khung viền kim loại / nút bấm gốc ở rìa ảnh: <span id="val-cat4-border">0%</span></label>
+            <input type="range" id="opt-cat4-border" min="0" max="0.22" step="0.01" value="0.0" />
+          </div>
+          <div class="slider-row">
+            <label>Độ bóng lóa mặt kính lồng đèn (Glass Sheen): <span id="val-cat4-glass">10%</span></label>
+            <input type="range" id="opt-cat4-glass" min="0" max="0.30" step="0.01" value="0.10" />
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="conv-actions">
+          <button class="btn btn-secondary" id="btn-conv-preview">
+            👁️ Xem Trước (Preview)
+          </button>
+          <button class="btn btn-accent" id="btn-conv-stage">
+            ✅ Convert &amp; Lưu Vào Staging
+          </button>
+        </div>
+
+        <!-- Conversion Report Box -->
+        <div class="conv-report hidden" id="conv-report-box"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- TAB 2: 3D MONUMENT & STATUE SWAPPER (CAT5) -->
+  <main class="workspace" id="tab-monuments">
+    <!-- Left List of 3D Monuments -->
+    <aside class="panel sidebar-panel">
+      <div class="panel-header">
+        <h2>🗽 Danh Mục Tượng Đài 3D</h2>
+        <span class="count-tag" id="monument-list-count">93 model</span>
+      </div>
+      <div class="filter-section">
+        <div class="filter-row">
+          <div class="filter-col">
+            <label>Khu vực / Bang:</label>
+            <select id="mon-filter-region">
+              <option value="ALL">Tất cả Khu vực</option>
+            </select>
+          </div>
+        </div>
+        <div class="search-box">
+          <input type="text" id="mon-filter-search" placeholder="Tìm tượng đài (vd: missliberty, sphinx, atrium, big_cock, disney)..." />
+        </div>
+      </div>
+      <div class="txd-list" id="monument-list"></div>
+    </aside>
+
+    <!-- Center 3D Monument Viewer -->
+    <section class="panel center-panel">
+      <div class="panel-header center-header">
+        <div class="txd-title-block">
+          <h2 id="active-mon-title">Chọn một Tượng Đài / Công Trình Biểu Tượng 3D ở bên trái</h2>
+          <div class="txd-meta-badges" id="active-mon-badges"></div>
+        </div>
+        <div class=" viewer3d-controls">
+          <button class="btn btn-sm" id="btn-mon-toggle-staged">🔄 Đang xem: Tượng Mới (Staged)</button>
+          <button class="btn btn-sm" id="btn-mon-wireframe">🕸️ Wireframe</button>
+          <button class="btn btn-sm" id="btn-mon-autorotate">💫 Tự xoay</button>
+          <button class="btn btn-sm" id="btn-mon-resetcam">🎯 Reset Camera</button>
+        </div>
+      </div>
+      <div class="webgl-stage full-height" id="monument-webgl-stage">
+        <div class="webgl-overlay-info" id="monument-3d-stats">Đang chờ chọn tượng đài 3D...</div>
+      </div>
+    </section>
+
+    <!-- Right Panel: 3D Statue Baker & Swapper -->
+    <aside class="panel converter-panel">
+      <div class="panel-header">
+        <h2>🗿 Xưởng Đúc Tượng Đài 3D (.DFF + .TXD)</h2>
+      </div>
+      <div class="converter-body">
+        <div class="conv-diagnostic-card">
+          <div class="diag-title">📏 Kích Thước Khung Bao 3D Của Tượng Gốc</div>
+          <div class="diag-grid">
+            <div><span>Model .DFF:</span> <strong id="mon-diag-dff">-</strong></div>
+            <div><span>Texture .TXD:</span> <strong id="mon-diag-txd">-</strong></div>
+            <div><span>Kích thước (R×S×C):</span> <strong id="mon-diag-dims" class="accent-text">-</strong></div>
+            <div><span>Số đa giác gốc:</span> <strong id="mon-diag-tris">-</strong></div>
+          </div>
+        </div>
+
+        <div class="conv-section">
+          <label class="conv-label">1. Chọn Mô Hình 3D Nguồn Để Đúc Thành Tượng:</label>
+          <div class="search-box">
+            <input type="text" id="skin-lib-search" placeholder="🔍 Tìm nhân vật trong Skin Library (vd: Furina, Raiden, Miku, Hu Tao)..." />
+          </div>
+          <select id="skin-lib-select" size="5" class="skin-select-list"></select>
+
+          <div class="sample-generator-box">
+            <div class="sample-header">Hoặc tải lên cặp file `.DFF` + `.TXD` tượng 3D riêng từ máy:</div>
+            <label>File mô hình `.DFF` mới:</label>
+            <input type="file" id="mon-custom-dff" accept=".dff" class="file-input" />
+            <label>File chất liệu `.TXD` mới:</label>
+            <input type="file" id="mon-custom-txd" accept=".txd" class="file-input" />
+          </div>
+        </div>
+
+        <div class="conv-section">
+          <label class="conv-label">2. Chất Liệu Bề Mặt Tượng (Statue Material Finish):</label>
+          <select id="mon-finish-select" class="conv-select-highlight">
+            <option value="white_marble">🏛️ Tượng Đá Cẩm Thạch Trắng (Carrara Marble)</option>
+            <option value="anime_figure">🎨 Anime Figure Khổng Lồ (Giữ màu gốc rực rỡ)</option>
+            <option value="golden_idol">👑 Tượng Vàng Hoàng Kim (24K Golden Idol)</option>
+            <option value="aged_bronze">🥉 Tượng Đồng Cổ Điển (Aged Bronze &amp; Patina)</option>
+            <option value="jade_archon">💎 Tượng Ngọc Bích Thần Tượng (Archon Jade)</option>
+          </select>
+        </div>
+
+        <div class="conv-section">
+          <label class="conv-label">3. Canh Chỉnh Kích Cỡ, Hướng Mặt &amp; Bệ Đá:</label>
+          <div class="slider-row">
+            <label>Tỷ lệ chiều cao so với tượng gốc (Height Scale): <span id="val-mon-scale">1.00×</span></label>
+            <input type="range" id="mon-height-scale" min="0.25" max="2.50" step="0.05" value="1.00" />
+          </div>
+          <div class="slider-row">
+            <label>Góc xoay hướng đứng (Yaw Rotation): <span id="val-mon-rot">0°</span></label>
+            <input type="range" id="mon-rotation" min="0" max="360" step="5" value="0" />
+          </div>
+          <div class="slider-row">
+            <label>Bù độ cao chân đế (Z Offset m): <span id="val-mon-zoff">0.0m</span></label>
+            <input type="range" id="mon-z-offset" min="-5.0" max="5.0" step="0.1" value="0.0" />
+          </div>
+          <label class="checkbox-label highlight-check">
+            <input type="checkbox" id="mon-add-pedestal" checked />
+            <span><strong>Tự động tạo Bệ Đá Bát Giác 2 Tầng</strong> dưới chân nhân vật và nướng màu đỉnh Ngày/Đêm (`PRELIT`)</span>
+          </label>
+        </div>
+
+        <div class="conv-actions">
+          <button class="btn btn-accent full-width" id="btn-bake-monument">
+            ⚡ Đúc Tượng 3D Tĩnh &amp; Lưu Vào Staging (.DFF + .TXD)
+          </button>
+        </div>
+
+        <div class="conv-report hidden" id="mon-bake-report"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- TAB 3: STAGED PACK, PERFORMANCE BUDGET & SAFE DEPLOY / ROLLBACK -->
+  <main class="workspace" id="tab-deploy">
+    <div class="deploy-layout">
+      <section class="panel deploy-col">
+        <div class="panel-header">
+          <h2>📦 Các File Đang Chờ Trong Staging (`data/staging/`)</h2>
+          <button class="btn btn-primary" id="btn-deploy-main">🚀 Áp Dụng Toàn Bộ Vào `gameplay-lab`</button>
+        </div>
+        <div class="deploy-info-banner">
+          💡 <strong>Cơ chế an toàn:</strong> Khi bấm Deploy, công cụ tự động kiểm tra game đã tắt, giữ khóa độc quyền <code>game-write.lock</code>, đồng bộ member vào tất cả các kho <code>.IMG</code> đang mount (gồm cả <code>GROUP_B1_TEXTURES.IMG</code>, <code>GROUP_A_MODS.IMG</code> và kho gốc <code>S&amp;S</code>), đồng thời trích lưu đúng vùng sector gốc để có thể <strong>Rollback Bit-for-Bit trong 1 giây</strong> bất kỳ lúc nào.
+        </div>
+
+        <h3>1. Danh sách `.TXD` Bề mặt 2D &amp; LOD Đã Stage</h3>
+        <div class="table-wrap">
+          <table class="data-table" id="staged-txds-table">
+            <thead>
+              <tr>
+                <th>Tên .TXD</th>
+                <th>Hạng mục</th>
+                <th>Khu vực</th>
+                <th>Archive .IMG đích</th>
+                <th>Trước → Sau (KB)</th>
+                <th>Số Raster sửa</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 20px;">2. Danh sách Tượng Đài 3D (`.DFF` + `.TXD`) Đã Stage</h3>
+        <div class="table-wrap">
+          <table class="data-table" id="staged-statues-table">
+            <thead>
+              <tr>
+                <th>Model .DFF</th>
+                <th>.TXD đi kèm</th>
+                <th>Nguồn Tượng 3D</th>
+                <th>Chất liệu</th>
+                <th>Kích thước 3D (m)</th>
+                <th>Dung lượng (.DFF+.TXD)</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel deploy-col">
+        <div class="panel-header">
+          <h2>⏪ Lịch Sử Transaction Deploy &amp; Phục Hồi (Rollback)</h2>
+        </div>
+        <div class="tx-list" id="transactions-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toast-container"></div>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
